@@ -1,4 +1,8 @@
-
+--
+-- This script is built for a server using a custom interface. All of the menu options will need to be replaced
+-- with whatever your server uses to display menus. This script also uses some proprietary functions.
+-- Script also contains optional TokoVOIP integration for pilots to communicate.
+--
 local Keys = {
 	["ESC"] = 322, ["F1"] = 288, ["F2"] = 289, ["F3"] = 170, ["F5"] = 166, ["F6"] = 167, ["F7"] = 168, ["F8"] = 169, ["F9"] = 56, ["F10"] = 57, 
 	["~"] = 243, ["1"] = 157, ["2"] = 158, ["3"] = 160, ["4"] = 164, ["5"] = 165, ["6"] = 159, ["7"] = 161, ["8"] = 162, ["9"] = 163, ["-"] = 84, ["="] = 83, ["BACKSPACE"] = 177, 
@@ -10,19 +14,19 @@ local Keys = {
 	["LEFT"] = 174, ["RIGHT"] = 175, ["TOP"] = 27, ["DOWN"] = 173,
 	["NENTER"] = 201, ["N4"] = 108, ["N5"] = 60, ["N6"] = 107, ["N+"] = 96, ["N-"] = 97, ["N7"] = 117, ["N8"] = 61, ["N9"] = 118
 }
-local enabled = true
-local debug = false
+local enabled = true -- Toggle the entire script
+local debug = false  -- Toggles Debug prints
 local blipsCreated = false
 local whitelisted = false 
 local whitelistedAdv = false 
 local vehicleIn = nil
 local playerPed = nil 
 local playerCoords = nil 
-local interactCoords = {x = -941.177, y = -2954.494, z = 14.0, head = 330.262}
-local vehicleSpawn = {x = -962.616, y = -2985.150, z = 13.945, head = 60.162}
-local vehicleReturn = {x = -962.616, y = -2985.150, z = 12.6}
-local modShop = {x = -961.970, y = -3030.213, z = 13.945}
-local vehicleList = {
+local interactCoords = {x = -941.177, y = -2954.494, z = 14.0, head = 330.262} -- Coords of where you want the player to get the plane from.
+local vehicleSpawn = {x = -962.616, y = -2985.150, z = 13.945, head = 60.162} -- Coords of where you want the aircraft to spawn.
+local vehicleReturn = {x = -962.616, y = -2985.150, z = 12.6} -- Coords of where you want the aircraft to be returned.
+local modShop = {x = -961.970, y = -3030.213, z = 13.945} -- Basic Modication shop that enables simple commands.
+local vehicleList = { -- List of aircraft you want to be purchasable.
     -- PLANES
     {name = "Cuban 800", hash = "cuban800", price = 3000},
     {name = "[S] Dodo", hash = "dodo", price = 4000},
@@ -36,7 +40,7 @@ local vehicleList = {
     {name = "Velum 5 Seater", hash = "velum2", price = 6000},
     {name = "Vestra", hash = "vestra", price = 8000},
 }
-local vehicleListAdv = {
+local vehicleListAdv = { -- Optional "Advanced" whitelist enabling bigger aircraft.
     -- PLANES
     {name = "Alpha-Z1", hash = "alphaz1", price = 1},
     {name = "Duster", hash = "duster", price = 1},
@@ -59,20 +63,12 @@ local vehicleListAdv = {
     {name = "Volatus", hash = "volatus", price = 1},
 }
 local whitelist = {
-    "Sean Callanan", --BCSO AUQ/DEVELOPER/Check Pilot
-    "Ted McFarlane", --DEVELOPER
-    "Mac Moody", -- Chief Pilot
-    "Ernest Flanagan", -- Check Pilot
-    "Mike Michaelson", -- Licensed Pilot
-    "Rob Boss", -- Licensed Pilot
-    "Leon Ravenscroft", -- Licensed Pilot
-    "Bruce Jackson", -- Licensed Pilot
-    "Martin Memphis", -- Licensed Pilot
+    "Value Here", -- Replace this with the identifier of who you want to be whitelisted.
 }
 local advancedWhitelist = {
-    "Sean Callanan" -- DEVELOPER
+    "Value Here", -- Replace this with the identifier of who you want to be whitelisted.
 }
-local flightRestrictions = {
+local flightRestrictions = { -- Basic Circles around specific areas to show "no-fly zones"
     {name = "Ft. Zancudo",              x = -2141.586,  y = 3178.877,   z = 32.81013, radius = 800.0, color = 1},
     {name = "Legion Square",            x = 31.39226,   y = -765.3126,  z = 44.23602, radius = 400.0, color = 1},
     {name = "Grapeseed Airstrip",       x = 2025.654,   y = 4761.278,   z = 41.06352, radius = 200.0, color = 5},
@@ -96,9 +92,14 @@ local function setAdvWhitelist()
     whitelistedAdv = true
 end
 
+local function TakeMoney(amount)
+    -- Insert function for removing money here.
+    -- There is currently no check for how much money the player has. Only removal. Or you can just leave this blank.
+end
+
 local function spawnPlane(idx, adv)
     if adv ~= "adv" then
-        TriggerServerEvent("removeMoney", vehicleList[idx].price)
+        TakeMoney(vehicleList[idx].price)
         RequestModel(GetHashKey(vehicleList[idx].hash))
         while not HasModelLoaded(GetHashKey(vehicleList[idx].hash)) do
             Wait(5)
@@ -107,10 +108,8 @@ local function spawnPlane(idx, adv)
         SetModelAsNoLongerNeeded(GetHashKey(vehicleList[idx].hash))
         local reg = math.random(10000,99999)
         SetVehicleNumberPlateText(plane, "N"..reg)
-        --"logToSlack", (title, message, color)
-        TriggerServerEvent("logToSlack", "Airplanes", exports.GTALife:GetPlayerRPNameFromSteamName(GetPlayerName(PlayerId())).." rented a "..vehicleList[idx].name.." for $"..vehicleList[idx].price.." with registration number N"..reg, "blue")
     else
-        TriggerServerEvent("removeMoney", vehicleListAdv[idx].price)
+        TakeMoney(vehicleListAdv[idx].price)
         RequestModel(GetHashKey(vehicleListAdv[idx].hash))
         while not HasModelLoaded(GetHashKey(vehicleListAdv[idx].hash)) do
             Wait(5)
@@ -119,8 +118,6 @@ local function spawnPlane(idx, adv)
         SetModelAsNoLongerNeeded(GetHashKey(vehicleListAdv[idx].hash))
         local reg = math.random(10000,99999)
         SetVehicleNumberPlateText(plane, "N"..reg)
-        --"logToSlack", (title, message, color)
-        TriggerServerEvent("logToSlack", "Airplanes", exports.GTALife:GetPlayerRPNameFromSteamName(GetPlayerName(PlayerId())).." rented a "..vehicleListAdv[idx].name.." for $"..vehicleListAdv[idx].price.." with registration number N"..reg, "blue")
     end
 end
 
@@ -146,11 +143,13 @@ local function planeWhitelistLoop()
     while enabled do
         Citizen.Wait(5000)
         for i = 1, #whitelist do
+            --                 Replace this export with whatever your server uses to identify people.
             if whitelist[i] == exports.GTALife:GetPlayerRPNameFromSteamName(GetPlayerName(PlayerId())) then 
                 setWhitelisted()
             end
         end
         for i = 1, #advancedWhitelist do
+            --                         Replace this export with whatever your server uses to identify people.
             if advancedWhitelist[i] == exports.GTALife:GetPlayerRPNameFromSteamName(GetPlayerName(PlayerId())) then 
                 setAdvWhitelist()
             end
@@ -158,14 +157,28 @@ local function planeWhitelistLoop()
     end
 end
 
-local function displayColorOptions()
-    --Utils.drawTxt(text,font,centre,x,y,scale,r,g,b,a)
-    local currentX = 0.01
-    local currentY = 0.20
-    Utils.drawTxt("Color List:\n https://wiki.gtanet.work/index.php?title=Vehicle_Colors", 4, false, currentX, currentY-0.01, 0.25, 255, 255, 255, 255)
+local function drawTxt(text,font,centre,x,y,scale,r,g,b,a)
+  SetTextFont(font)
+  SetTextProportional(0)
+  SetTextScale(scale, scale)
+  SetTextColour(r, g, b, a)
+  SetTextDropShadow(0, 0, 0, 0,255)
+  SetTextEdge(1, 0, 0, 0, 255)
+  SetTextDropShadow()
+  SetTextOutline()
+  SetTextCentre(centre)
+  SetTextEntry("STRING")
+  AddTextComponentString(text)
+  DrawText(x , y) 
 end
 
-Citizen.CreateThread(function()
+local function displayColorOptions()
+    local currentX = 0.01
+    local currentY = 0.20
+    drawTxt("Color List:\n https://wiki.gtanet.work/index.php?title=Vehicle_Colors", 4, false, currentX, currentY-0.01, 0.25, 255, 255, 255, 255)
+end
+
+local function CreateTheBlip()
     local interactBlip = AddBlipForCoord(interactCoords.x, interactCoords.y, interactCoords.z)
     SetBlipSprite(interactBlip, 251)
     SetBlipColour(interactBlip, 3)
@@ -173,6 +186,10 @@ Citizen.CreateThread(function()
     BeginTextCommandSetBlipName("STRING")
     AddTextComponentString('SA Aviation Center')
     EndTextCommandSetBlipName(interactBlip)
+end
+
+Citizen.CreateThread(function()
+    CreateTheBlip()
     while true do
         Wait(5)
         playerPed = GetPlayerPed(-1)
@@ -191,7 +208,7 @@ Citizen.CreateThread(function()
                 DrawMarker(33, interactCoords.x, interactCoords.y, interactCoords.z, 0.0, 0.0, 0.0, 0.0, 0.0, interactCoords.head, 1.0, 1.0, 1.0, 255, 255, 255, 255, true, false, 2, false, null, null, false)
             end
             if GetDistanceBetweenCoords(playerCoords, interactCoords.x, interactCoords.y, interactCoords.z, true) < 2 then
-                exports.GTALife:drawTxt('Press ~g~[E]~s~ to select an aircraft.',0,1,0.5,0.8,0.6,255,255,255,255)
+                drawTxt('Press ~g~[E]~s~ to select an aircraft.',0,1,0.5,0.8,0.6,255,255,255,255)
                 if IsControlJustPressed(0, Keys['E']) then
                     openMainMenu()
                 end
@@ -199,7 +216,7 @@ Citizen.CreateThread(function()
             if GetDistanceBetweenCoords(playerCoords, vehicleReturn.x, vehicleReturn.y, vehicleReturn.z, true) < 50 and (IsPedInAnyPlane(playerPed) or IsPedInAnyHeli(playerPed)) then
                 DrawMarker(1, vehicleReturn.x, vehicleReturn.y, vehicleReturn.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20.0, 20.0, 1.0, 255, 0, 0, 255, false, false, 2, false, null, null, false)
                 if GetDistanceBetweenCoords(playerCoords, vehicleReturn.x, vehicleReturn.y, vehicleReturn.z, true) < 20 then
-                    exports.GTALife:drawTxt('Press ~g~[E]~s~ to return this aircraft.',0,1,0.5,0.8,0.6,255,255,255,255)
+                    drawTxt('Press ~g~[E]~s~ to return this aircraft.',0,1,0.5,0.8,0.6,255,255,255,255)
                     if IsControlJustPressed(0, Keys['E']) then
                         DeleteEntity(GetVehiclePedIsIn(playerPed, false))
                     end
@@ -208,7 +225,7 @@ Citizen.CreateThread(function()
             if GetDistanceBetweenCoords(playerCoords, modShop.x, modShop.y, modShop.z) < 50 and (IsPedInAnyPlane(playerPed) or IsPedInAnyHeli(playerPed)) then
                 DrawMarker(1, modShop.x, modShop.y, modShop.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 10.0, 1.0, 0, 0, 255, 255, false, false, 2, false, null, null, false)
                 if GetDistanceBetweenCoords(playerCoords, modShop.x, modShop.y, modShop.z) < 20 then
-                    exports.GTALife:drawTxt('/setpaint # # # or /setlivery #',0,1,0.5,0.8,0.6,255,255,255,255)
+                    drawTxt('/setpaint # # # or /setlivery #',0,1,0.5,0.8,0.6,255,255,255,255)
                     displayColorOptions()
                 end
             end
@@ -264,10 +281,10 @@ local function RunPlaneThread()
     Citizen.CreateThread(planeWhitelistLoop)
 end
 
-AddEventHandler("playerDataSet", RunPlaneThread)
+AddEventHandler("playerSpawned", RunPlaneThread)
 
 RegisterCommand('manuallystartairplanescauseimtoolazytorestartframework', function(source, args, rawCommand)
-    
+    -- This command resets the whitelist check for when the resource is restarted without leaving the game.
     RunPlaneThread()
     
 end, false)
