@@ -1,7 +1,5 @@
 --
--- This script is built for a server using a custom interface. All of the menu options will need to be replaced
--- with whatever your server uses to display menus. This script also uses some proprietary functions.
--- Script also contains optional TokoVOIP integration for pilots to communicate.
+-- Script contains optional TokoVOIP integration for pilots to communicate.
 --
 local Keys = {
 	["ESC"] = 322, ["F1"] = 288, ["F2"] = 289, ["F3"] = 170, ["F5"] = 166, ["F6"] = 167, ["F7"] = 168, ["F8"] = 169, ["F9"] = 56, ["F10"] = 57, 
@@ -17,6 +15,7 @@ local Keys = {
 local enabled = true -- Toggle the entire script
 local debug = true  -- Toggles Debug prints
 local useFlightRestrictions = true
+local tokovoipRadioId = 1
 local _menuPool = NativeUI.CreatePool()
 local mainMenu = NativeUI.CreateMenu("Aircraft Rental", "Rent an aircraft.")
 _menuPool:Add(mainMenu)
@@ -103,6 +102,17 @@ local function TakeMoney(amount)
     -- There is currently no check for how much money the player has. Only removal. Or you can just leave this blank.
 end
 
+local function NotifyPlayer(time, text)
+    exports.pNotify:SendNotification(
+        {
+        text = tostring(text), 
+        type = "info", 
+        timeout = tonumber(time),
+        layout = "centerLeft"
+        }
+    )
+end
+
 local function spawnPlane(idx, adv)
     if adv ~= "adv" then
         if debug then
@@ -146,11 +156,6 @@ local function openMainMenu()
     
     mainMenu:Clear()
     
-    _menuPool:RefreshIndex()
-
-    mainMenu:Visible(not mainMenu:Visible())
-
-    _menuPool:MouseEdgeEnabled (false);
 
     for veh = 1, #vehicleList do
         local thisItem = NativeUI.CreateItem("~g~$"..vehicleList[veh].price.." ~s~"..vehicleList[veh].name.."","")
@@ -171,6 +176,12 @@ local function openMainMenu()
             end
         end
     end
+    
+    _menuPool:RefreshIndex()
+    
+    mainMenu:Visible(not mainMenu:Visible())
+
+    _menuPool:MouseEdgeEnabled (false);
 end
 
 local function planeWhitelistLoop()
@@ -279,18 +290,18 @@ RegisterCommand('setpaint', function(source, args, rawCommand)
             SetVehicleExtraColours(vehicleIn, tonumber(args[3]))
         end
     else 
-        TriggerEvent("ShowInformationLeft", 5000, "Not near a mod shop.")
+        NotifyPlayer(5000, "Not near a mod shop.")
     end
 end, false)
 
 RegisterCommand('setlivery', function(source, args, rawCommand)
-    TriggerEvent("ShowInformationLeft", 5000, "Possible Liveries: "..GetVehicleLiveryCount(vehicleIn, false))
+    NotifyPlayer(5000, "Possible Liveries: "..GetVehicleLiveryCount(vehicleIn, false))
     if GetDistanceBetweenCoords(playerCoords, modShop.x, modShop.y, modShop.z) < 10 then
         if args[1] ~= nil then
             SetVehicleLivery(vehicleIn, tonumber(args[1]))
         end
     else 
-        TriggerEvent("ShowInformationLeft", 5000, "Not near a mod shop.")
+        NotifyPlayer(5000, "Not near a mod shop.")
     end
 end, false)
 
@@ -298,12 +309,12 @@ local onRadio = false
 RegisterCommand('atc', function(source, args, rawCommand)
     
     if whitelisted and not onRadio then
-        exports.tokovoip_script:addPlayerToRadio(11)
-        TriggerEvent("ShowInformationLeft", 2000, "Joining ATC")
+        exports.tokovoip_script:addPlayerToRadio(tonumber(tokovoipRadioId))
+        NotifyPlayer(2000, "Joining ATC")
         onRadio = true
     else
-        exports.tokovoip_script:removePlayerFromRadio(11)
-        TriggerEvent("ShowInformationLeft", 2000, "Leaving ATC")
+        exports.tokovoip_script:removePlayerFromRadio(tonumber(tokovoipRadioId))
+        NotifyPlayer(2000, "Leaving ATC")
         onRadio = false
     end
 
@@ -313,7 +324,13 @@ local function RunPlaneThread()
     Citizen.CreateThread(planeWhitelistLoop)
 end
 
-AddEventHandler("playerSpawned", RunPlaneThread)
+--AddEventHandler("playerSpawned", RunPlaneThread)
+AddEventHandler('onClientResourceStart', function (resourceName)
+    if(GetCurrentResourceName() ~= resourceName) then
+        return
+    end
+    RunPlaneThread()
+end)
 
 if debug then
     RegisterCommand('ManuallyStartAirplanesCauseImTooLazyToRestartMyGame', function(source, args, rawCommand)
