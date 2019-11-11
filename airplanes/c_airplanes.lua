@@ -1,50 +1,45 @@
---
--- Script contains optional TokoVOIP integration for pilots to communicate.
---
-local Keys = {
-	["ESC"] = 322, ["F1"] = 288, ["F2"] = 289, ["F3"] = 170, ["F5"] = 166, ["F6"] = 167, ["F7"] = 168, ["F8"] = 169, ["F9"] = 56, ["F10"] = 57, 
-	["~"] = 243, ["1"] = 157, ["2"] = 158, ["3"] = 160, ["4"] = 164, ["5"] = 165, ["6"] = 159, ["7"] = 161, ["8"] = 162, ["9"] = 163, ["-"] = 84, ["="] = 83, ["BACKSPACE"] = 177, 
-	["TAB"] = 37, ["Q"] = 44, ["W"] = 32, ["E"] = 38, ["R"] = 45, ["T"] = 245, ["Y"] = 246, ["U"] = 303, ["P"] = 199, ["["] = 39, ["]"] = 40, ["ENTER"] = 18,
-	["CAPS"] = 137, ["A"] = 34, ["S"] = 8, ["D"] = 9, ["F"] = 23, ["G"] = 47, ["H"] = 74, ["K"] = 311, ["L"] = 182,
-	["LEFTSHIFT"] = 21, ["Z"] = 20, ["X"] = 73, ["C"] = 26, ["V"] = 0, ["B"] = 29, ["N"] = 249, ["M"] = 244, [","] = 82, ["."] = 81,
-	["LEFTCTRL"] = 36, ["LEFTALT"] = 19, ["SPACE"] = 22, ["RIGHTCTRL"] = 70, 
-	["HOME"] = 213, ["PAGEUP"] = 10, ["PAGEDOWN"] = 11, ["DELETE"] = 178,
-	["LEFT"] = 174, ["RIGHT"] = 175, ["TOP"] = 27, ["DOWN"] = 173,
-	["NENTER"] = 201, ["N4"] = 108, ["N5"] = 60, ["N6"] = 107, ["N+"] = 96, ["N-"] = 97, ["N7"] = 117, ["N8"] = 61, ["N9"] = 118
+------------------------
+-- CONFIG STARTS HERE --
+------------------------
+local enabled = true                -- Toggle the entire script
+local debug = false                 -- Toggles Debug prints
+local useFlightRestrictions = true  -- Toggles transparent blips on the map for whitelisted users.
+local useTokoVOIP = true            -- Enable or Disable TokoVOIP integration.
+local tokovoipRadioId = 1           -- Radio ID to use for TokoVOIP integration.
+local interactCoords = {            -- Coords of where you want the player to get the plane from.
+    x = -941.177, 
+    y = -2954.494, 
+    z = 14.0, 
+    head = 330.262
 }
-local enabled = true -- Toggle the entire script
-local debug = true  -- Toggles Debug prints
-local useFlightRestrictions = true
-local tokovoipRadioId = 1
-local _menuPool = NativeUI.CreatePool()
-local mainMenu = NativeUI.CreateMenu("Aircraft Rental", "Rent an aircraft.")
-_menuPool:Add(mainMenu)
-local blipsCreated = false
-local whitelisted = false 
-local whitelistedAdv = false 
-local vehicleIn = nil
-local playerPed = nil 
-local playerCoords = nil 
-local interactCoords = {x = -941.177, y = -2954.494, z = 14.0, head = 330.262} -- Coords of where you want the player to get the plane from.
-local vehicleSpawn = {x = -962.616, y = -2985.150, z = 13.945, head = 60.162} -- Coords of where you want the aircraft to spawn.
-local vehicleReturn = {x = -962.616, y = -2985.150, z = 12.6} -- Coords of where you want the aircraft to be returned.
-local modShop = {x = -961.970, y = -3030.213, z = 13.945} -- Basic Modication shop that enables simple commands.
-local vehicleList = { -- List of aircraft you want to be purchasable.
-    -- PLANES
+local vehicleSpawn = {              -- Coords of where you want the aircraft to spawn.
+    x = -962.616, 
+    y = -2985.150, 
+    z = 13.945, 
+    head = 60.162
+}
+local vehicleReturn = {             -- Coords of where you want the aircraft to be returned.
+    x = -962.616, 
+    y = -2985.150, 
+    z = 12.6
+}
+local modShop = {                   -- Basic Modication shop that enables simple commands.
+    x = -961.970, 
+    y = -3030.213, 
+    z = 13.945
+}
+local vehicleList = {               -- List of aircraft you want to be purchasable.
     {name = "Cuban 800", hash = "cuban800", price = 3000},
     {name = "Dodo", hash = "dodo", price = 4000},
     {name = "Mallard", hash = "stunt", price = 3000},
     {name = "Mammatus", hash = "Mammatus", price = 2000},
-    {name = "Mammatus Seaplane", hash = "mammatus2", price = 2250},
-    {name = "Mammoth Scamp", hash = "scamp", price = 2750},
     {name = "Nimbus", hash = "nimbus", price = 30000},
     {name = "Seabreeze", hash = "seabreeze", price = 4000},
     {name = "Velum", hash = "velum", price = 4500},
     {name = "Velum 5 Seater", hash = "velum2", price = 6000},
     {name = "Vestra", hash = "vestra", price = 8000},
 }
-local vehicleListAdv = { -- Optional "Advanced" whitelist enabling bigger aircraft.
-    -- PLANES
+local vehicleListAdv = {            -- Optional "Advanced" whitelist enabling bigger aircraft.
     {name = "Alpha-Z1", hash = "alphaz1", price = 1},
     {name = "Duster", hash = "duster", price = 1},
     {name = "Howard NX-25", hash = "howard", price = 1},
@@ -53,7 +48,6 @@ local vehicleListAdv = { -- Optional "Advanced" whitelist enabling bigger aircra
     {name = "Miljet", hash = "miljet", price = 1},
     {name = "Shamal", hash = "shamal", price = 1},
     {name = "Ultralight", hash = "microlight", price = 1},
-    -- HELICOPTERS
     {name = "Frogger", hash = "frogger", price = 1},
     {name = "Frogger 2", hash = "frogger2", price = 1},
     {name = "Havok", hash = "havpk", price = 1},
@@ -66,14 +60,14 @@ local vehicleListAdv = { -- Optional "Advanced" whitelist enabling bigger aircra
     {name = "Volatus", hash = "volatus", price = 1},
 }
 local whitelist = {
-    "Value Here", -- Replace this with the identifier of who you want to be whitelisted.
+    "Shredxt", -- Replace this with the identifier of who you want to be whitelisted. (Uses Steam names by default)
     "DevoutRain2500",
 }
 local advancedWhitelist = {
-    "Value Here", -- Replace this with the identifier of who you want to be whitelisted.
+    "Shredxt", -- Replace this with the identifier of who you want to be whitelisted. (Uses Steam names by default)
     "DevoutRain2500",
 }
-local flightRestrictions = { -- Basic Circles around specific areas to show "no-fly zones"
+local flightRestrictions = { -- Basic Circles around specific areas to show "no-fly zones" or caution areas.
     {name = "Ft. Zancudo",              x = -2141.586,  y = 3178.877,   z = 32.81013, radius = 800.0, color = 1},
     {name = "Legion Square",            x = 31.39226,   y = -765.3126,  z = 44.23602, radius = 400.0, color = 1},
     {name = "Grapeseed Airstrip",       x = 2025.654,   y = 4761.278,   z = 41.06352, radius = 200.0, color = 5},
@@ -88,6 +82,31 @@ local flightRestrictions = { -- Basic Circles around specific areas to show "no-
     {name = "BBSP Heli Pad",            x = 1690.902,   y = 2604.603,   z = 50.00000, radius = 30.0, color = 3},
     {name = "BBSPD",                    x = 1690.902,   y = 2604.603,   z = 47.44394, radius = 200.0, color = 1},
 }
+----------------------
+-- CONFIG ENDS HERE --
+----------------------
+local Keys = {
+	["ESC"] = 322, ["F1"] = 288, ["F2"] = 289, ["F3"] = 170, ["F5"] = 166, ["F6"] = 167, ["F7"] = 168, ["F8"] = 169, ["F9"] = 56, ["F10"] = 57, 
+	["~"] = 243, ["1"] = 157, ["2"] = 158, ["3"] = 160, ["4"] = 164, ["5"] = 165, ["6"] = 159, ["7"] = 161, ["8"] = 162, ["9"] = 163, ["-"] = 84, ["="] = 83, ["BACKSPACE"] = 177, 
+	["TAB"] = 37, ["Q"] = 44, ["W"] = 32, ["E"] = 38, ["R"] = 45, ["T"] = 245, ["Y"] = 246, ["U"] = 303, ["P"] = 199, ["["] = 39, ["]"] = 40, ["ENTER"] = 18,
+	["CAPS"] = 137, ["A"] = 34, ["S"] = 8, ["D"] = 9, ["F"] = 23, ["G"] = 47, ["H"] = 74, ["K"] = 311, ["L"] = 182,
+	["LEFTSHIFT"] = 21, ["Z"] = 20, ["X"] = 73, ["C"] = 26, ["V"] = 0, ["B"] = 29, ["N"] = 249, ["M"] = 244, [","] = 82, ["."] = 81,
+	["LEFTCTRL"] = 36, ["LEFTALT"] = 19, ["SPACE"] = 22, ["RIGHTCTRL"] = 70, 
+	["HOME"] = 213, ["PAGEUP"] = 10, ["PAGEDOWN"] = 11, ["DELETE"] = 178,
+	["LEFT"] = 174, ["RIGHT"] = 175, ["TOP"] = 27, ["DOWN"] = 173,
+	["NENTER"] = 201, ["N4"] = 108, ["N5"] = 60, ["N6"] = 107, ["N+"] = 96, ["N-"] = 97, ["N7"] = 117, ["N8"] = 61, ["N9"] = 118
+}
+local _menuPool = NativeUI.CreatePool()
+local mainMenu = NativeUI.CreateMenu("Aircraft Rental", "Rent an aircraft.")
+_menuPool:Add(mainMenu)
+local blipsCreated = false
+local whitelisted = false 
+local whitelistedAdv = false 
+local vehicleIn = nil
+local playerPed = nil 
+local playerCoords = nil 
+local onRadio = false
+local transponderData = {}
 
 local function setWhitelisted()
     whitelisted = true
@@ -176,7 +195,7 @@ local function openMainMenu()
             end
         end
     end
-    
+
     _menuPool:RefreshIndex()
     
     mainMenu:Visible(not mainMenu:Visible())
@@ -187,6 +206,7 @@ end
 local function planeWhitelistLoop()
     if enabled then
         Citizen.Wait(5000)
+        playerPed = GetPlayerPed(-1)
         for i = 1, #whitelist do
             if whitelist[i] == GetPlayerName(PlayerId()) then 
                 if debug then
@@ -198,7 +218,7 @@ local function planeWhitelistLoop()
         for i = 1, #advancedWhitelist do
             if advancedWhitelist[i] == GetPlayerName(PlayerId()) then 
                 if debug then
-                    print("Player "..GetPlayerName(PlayerId()).." matched the whitelist. Whitelising.")
+                    print("Player "..GetPlayerName(PlayerId()).." matched the advanced whitelist. Whitelising.")
                 end
                 setAdvWhitelist()
             end
@@ -221,6 +241,21 @@ local function drawTxt(text,font,centre,x,y,scale,r,g,b,a)
     DrawText(x , y) 
 end
 
+function DrawText3Ds(x,y,z, text)
+    local onScreen,_x,_y=World3dToScreen2d(x,y,z)
+    local px,py,pz=table.unpack(GetGameplayCamCoords())
+    SetTextScale(0.35, 0.35)
+    SetTextFont(4)
+    SetTextProportional(1)
+    SetTextColour(255, 255, 255, 215)
+    SetTextEntry("STRING")
+    SetTextCentre(1)
+    AddTextComponentString(text)
+    DrawText(_x,_y)
+    local factor = (string.len(text)) / 370
+    DrawRect(_x,_y+0.0125, 0.015+ factor, 0.03, 41, 11, 41, 68)
+end
+
 local function displayColorOptions()
     local currentX = 0.01
     local currentY = 0.20
@@ -237,21 +272,26 @@ local function CreateTheBlip()
     EndTextCommandSetBlipName(interactBlip)
 end
 
+local function CreateTheOtherBlips()
+    Citizen.CreateThread(function()
+        for i = 1, #flightRestrictions do 
+            local blip = AddBlipForRadius(flightRestrictions[i].x, flightRestrictions[i].y, flightRestrictions[i].z, flightRestrictions[i].radius)
+            SetBlipColour(blip, flightRestrictions[i].color)
+            SetBlipAlpha(blip, 150)
+        end
+    end)
+end
+
 Citizen.CreateThread(function()
     CreateTheBlip()
     while enabled do
         Wait(5)
         _menuPool:ProcessMenus()
-        playerPed = GetPlayerPed(-1)
         playerCoords = GetEntityCoords(playerPed, true)
         vehicleIn = GetVehiclePedIsIn(playerPed, false)
         if whitelisted then
             if not blipsCreated and useFlightRestrictions then
-                for i = 1, #flightRestrictions do 
-                    local blip = AddBlipForRadius(flightRestrictions[i].x, flightRestrictions[i].y, flightRestrictions[i].z, flightRestrictions[i].radius)
-                    SetBlipColour(blip, flightRestrictions[i].color)
-                    SetBlipAlpha(blip, 150)
-                end
+                CreateTheOtherBlips()
                 blipsCreated = true 
             end
             if GetDistanceBetweenCoords(playerCoords, interactCoords.x, interactCoords.y, interactCoords.z, true) < 20 then
@@ -277,6 +317,27 @@ Citizen.CreateThread(function()
                 if GetDistanceBetweenCoords(playerCoords, modShop.x, modShop.y, modShop.z) < 20 then
                     drawTxt('/setpaint # # # or /setlivery #',0,1,0.5,0.8,0.6,255,255,255,255)
                     displayColorOptions()
+                end
+            end
+            if IsPedInAnyPlane(playerPed) then
+                local aircraft = GetLabelText(GetDisplayNameFromVehicleModel(GetEntityModel(vehicleIn)))
+                local coords = GetEntityCoords(vehicleIn, false)
+                local altitude = GetEntityHeightAboveGround(vehicleIn)
+                local netID = NetworkGetNetworkIdFromEntity(vehicleIn)
+                local data = {
+                    aircraft = aircraft,
+                    altitude = altitude,
+                    coords = coords,
+                    netID = netID
+                }
+                TriggerServerEvent("airplanes:updateTransponder", data)
+            end
+            if IsPedInAnyPlane(playerPed) then
+                for k, v in pairs(transponderData) do
+                    --print(vehicleIn.." vs "..NetworkGetEntityFromNetworkId(k).." with netID: "..tostring(k))
+                    --if vehicleIn ~= NetworkGetEntityFromNetworkId(k) then
+                        DrawText3Ds(transponderData[k].coords.x, transponderData[k].coords.y, transponderData[k].coords.z, transponderData[k].aircraft.." | "..math.floor(transponderData[k].altitude).." FT")
+                    --end
                 end
             end
         end
@@ -305,20 +366,21 @@ RegisterCommand('setlivery', function(source, args, rawCommand)
     end
 end, false)
 
-local onRadio = false
-RegisterCommand('atc', function(source, args, rawCommand)
-    
-    if whitelisted and not onRadio then
-        exports.tokovoip_script:addPlayerToRadio(tonumber(tokovoipRadioId))
-        NotifyPlayer(2000, "Joining ATC")
-        onRadio = true
-    else
-        exports.tokovoip_script:removePlayerFromRadio(tonumber(tokovoipRadioId))
-        NotifyPlayer(2000, "Leaving ATC")
-        onRadio = false
-    end
+if useTokoVOIP then
+    RegisterCommand('atc', function(source, args, rawCommand)
+        
+        if whitelisted and not onRadio then
+            exports.tokovoip_script:addPlayerToRadio(tonumber(tokovoipRadioId))
+            NotifyPlayer(2000, "Joining ATC")
+            onRadio = true
+        else
+            exports.tokovoip_script:removePlayerFromRadio(tonumber(tokovoipRadioId))
+            NotifyPlayer(2000, "Leaving ATC")
+            onRadio = false
+        end
 
-end, false)
+    end, false)
+end
 
 local function RunPlaneThread()
     Citizen.CreateThread(planeWhitelistLoop)
@@ -329,13 +391,13 @@ AddEventHandler('onClientResourceStart', function (resourceName)
     if(GetCurrentResourceName() ~= resourceName) then
         return
     end
-    RunPlaneThread()
+    --RunPlaneThread()
+    Citizen.CreateThread(planeWhitelistLoop)
 end)
 
-if debug then
-    RegisterCommand('ManuallyStartAirplanesCauseImTooLazyToRestartMyGame', function(source, args, rawCommand)
-        -- This command resets the whitelist check for when the resource is restarted without leaving the game.
-        RunPlaneThread()
-        
-    end, false)
-end
+RegisterNetEvent("airplanes:updateTransponders")
+AddEventHandler("airplanes:updateTransponders", function(data)
+
+    transponderData = data 
+
+end)
