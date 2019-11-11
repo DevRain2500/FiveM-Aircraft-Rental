@@ -15,7 +15,11 @@ local Keys = {
 	["NENTER"] = 201, ["N4"] = 108, ["N5"] = 60, ["N6"] = 107, ["N+"] = 96, ["N-"] = 97, ["N7"] = 117, ["N8"] = 61, ["N9"] = 118
 }
 local enabled = true -- Toggle the entire script
-local debug = false  -- Toggles Debug prints
+local debug = true  -- Toggles Debug prints
+local useFlightRestrictions = true
+local _menuPool = NativeUI.CreatePool()
+local mainMenu = NativeUI.CreateMenu("Aircraft Rental", "Rent an aircraft.")
+_menuPool:Add(mainMenu)
 local blipsCreated = false
 local whitelisted = false 
 local whitelistedAdv = false 
@@ -29,13 +33,13 @@ local modShop = {x = -961.970, y = -3030.213, z = 13.945} -- Basic Modication sh
 local vehicleList = { -- List of aircraft you want to be purchasable.
     -- PLANES
     {name = "Cuban 800", hash = "cuban800", price = 3000},
-    {name = "[S] Dodo", hash = "dodo", price = 4000},
+    {name = "Dodo", hash = "dodo", price = 4000},
     {name = "Mallard", hash = "stunt", price = 3000},
     {name = "Mammatus", hash = "Mammatus", price = 2000},
-    {name = "[S] Mammatus Seaplane", hash = "mammatus2", price = 2250},
+    {name = "Mammatus Seaplane", hash = "mammatus2", price = 2250},
     {name = "Mammoth Scamp", hash = "scamp", price = 2750},
     {name = "Nimbus", hash = "nimbus", price = 30000},
-    {name = "[S] Seabreeze", hash = "seabreeze", price = 4000},
+    {name = "Seabreeze", hash = "seabreeze", price = 4000},
     {name = "Velum", hash = "velum", price = 4500},
     {name = "Velum 5 Seater", hash = "velum2", price = 6000},
     {name = "Vestra", hash = "vestra", price = 8000},
@@ -55,7 +59,7 @@ local vehicleListAdv = { -- Optional "Advanced" whitelist enabling bigger aircra
     {name = "Frogger 2", hash = "frogger2", price = 1},
     {name = "Havok", hash = "havpk", price = 1},
     {name = "Maverick", hash = "maverick", price = 1},
-    {name = "[S] Sea Sparrow ", hash = "seasparrow", price = 1},
+    {name = "Sea Sparrow ", hash = "seasparrow", price = 1},
     {name = "Super Volito", hash = "supervolito", price = 1},
     {name = "Super Volito Carbon", hash = "supervolito2", price = 1},
     {name = "Swift", hash = "swift", price = 1},
@@ -64,9 +68,11 @@ local vehicleListAdv = { -- Optional "Advanced" whitelist enabling bigger aircra
 }
 local whitelist = {
     "Value Here", -- Replace this with the identifier of who you want to be whitelisted.
+    "DevoutRain2500",
 }
 local advancedWhitelist = {
     "Value Here", -- Replace this with the identifier of who you want to be whitelisted.
+    "DevoutRain2500",
 }
 local flightRestrictions = { -- Basic Circles around specific areas to show "no-fly zones"
     {name = "Ft. Zancudo",              x = -2141.586,  y = 3178.877,   z = 32.81013, radius = 800.0, color = 1},
@@ -99,58 +105,90 @@ end
 
 local function spawnPlane(idx, adv)
     if adv ~= "adv" then
+        if debug then
+            print("[airplanes] Taking "..vehicleList[idx].price.." money.")
+        end
         TakeMoney(vehicleList[idx].price)
         RequestModel(GetHashKey(vehicleList[idx].hash))
         while not HasModelLoaded(GetHashKey(vehicleList[idx].hash)) do
             Wait(5)
         end
-        plane = exports.GTALife:createRentedVehicle(vehicleList[idx].hash, vehicleSpawn.x, vehicleSpawn.y, vehicleSpawn.z, vehicleSpawn.head)
+        if debug then
+            print("[airplanes] Spawning "..vehicleList[idx].hash)
+        end
+        plane = CreateVehicle(GetHashKey(vehicleList[idx].hash), vehicleSpawn.x, vehicleSpawn.y, vehicleSpawn.z, vehicleSpawn.head, true)
         SetModelAsNoLongerNeeded(GetHashKey(vehicleList[idx].hash))
+        SetEntityAsMissionEntity(plane, true, true)
         local reg = math.random(10000,99999)
         SetVehicleNumberPlateText(plane, "N"..reg)
     else
+        if debug then
+            print("[airplanes] Taking "..vehicleListAdv[idx].price.." money.")
+        end
         TakeMoney(vehicleListAdv[idx].price)
         RequestModel(GetHashKey(vehicleListAdv[idx].hash))
         while not HasModelLoaded(GetHashKey(vehicleListAdv[idx].hash)) do
             Wait(5)
         end
-        plane = exports.GTALife:createRentedVehicle(vehicleListAdv[idx].hash, vehicleSpawn.x, vehicleSpawn.y, vehicleSpawn.z, vehicleSpawn.head)
+        if debug then
+            print("[airplanes] Spawning "..vehicleListAdv[idx].hash)
+        end
+        plane = CreateVehicle(GetHashKey(vehicleListAdv[idx].hash), vehicleSpawn.x, vehicleSpawn.y, vehicleSpawn.z, vehicleSpawn.head, true)
         SetModelAsNoLongerNeeded(GetHashKey(vehicleListAdv[idx].hash))
+        SetEntityAsMissionEntity(plane, true, true)
         local reg = math.random(10000,99999)
         SetVehicleNumberPlateText(plane, "N"..reg)
     end
 end
 
 local function openMainMenu()
-	exports.interface:reset();
-	exports.interface:newMenu("ListVehicleOptions", "ListVehicleOptions", false);
-	exports.interface:addButtonToMenu("ListVehicleOptions", "ListVehicleOptions:closeMenu", "<span style='color:#ff0000;'>Close</span>", [[Interface.hide()]]);
-    exports.interface:addButtonToMenu("ListVehicleOptions", "ListVehicleOptions:WIP", "<font color='orange'>Page is WIP</font>", function() end);
+
+    
+    mainMenu:Clear()
+    
+    _menuPool:RefreshIndex()
+
+    mainMenu:Visible(not mainMenu:Visible())
+
+    _menuPool:MouseEdgeEnabled (false);
+
     for veh = 1, #vehicleList do
-        exports.interface:addButtonToMenu("ListVehicleOptions", "ListVehicleOptions:"..veh.."", "<div style='text-align: left;'>Price: <font color='lightgreen'>$"..vehicleList[veh].price.."</font> "..vehicleList[veh].name.."</div>", function() exports.interface:hide(); spawnPlane(veh); end);
-    end
-    exports.interface:addButtonToMenu("ListVehicleOptions", "ListVehicleOptions:WIP2", "<font color='orange'>Developer Section:</font>", function() end);
-    if whitelistedAdv then
-        for veh = 1, #vehicleListAdv do
-            exports.interface:addButtonToMenu("ListVehicleOptions", "ListVehicleOptions:"..veh.."Adv", "<div style='text-align: left;'>Price: <font color='lightgreen'>$"..vehicleListAdv[veh].price.."</font>"..vehicleListAdv[veh].name.."</div>", function() exports.interface:hide(); spawnPlane(veh, "adv"); end);
+        local thisItem = NativeUI.CreateItem("~g~$"..vehicleList[veh].price.." ~s~"..vehicleList[veh].name.."","")
+        mainMenu:AddItem(thisItem)
+        thisItem.Activated = function(ParentMenu,SelectedItem)
+            spawnPlane(veh)
+            mainMenu:Visible(not mainMenu:Visible())
         end
     end
-    exports.interface:addButtonToMenu("ListVehicleOptions", "ListVehicleOptions:parachute", "Grab a parachute", function() exports.interface:hide(); GiveWeaponToPed(GetPlayerPed(-1), GetHashKey("gadget_parachute"), 1, false, false); end);
-	exports.interface:show("ListVehicleOptions");
+
+    if whitelistedAdv then
+        for veh = 1, #vehicleListAdv do
+            local thisItem = NativeUI.CreateItem("~g~$"..vehicleListAdv[veh].price.." ~s~"..vehicleListAdv[veh].name.."","")
+            mainMenu:AddItem(thisItem)
+            thisItem.Activated = function(ParentMenu,SelectedItem)
+                spawnPlane(veh, "adv")
+                mainMenu:Visible(not mainMenu:Visible())
+            end
+        end
+    end
 end
 
 local function planeWhitelistLoop()
-    while enabled do
+    if enabled then
         Citizen.Wait(5000)
         for i = 1, #whitelist do
-            --                 Replace this export with whatever your server uses to identify people.
-            if whitelist[i] == exports.GTALife:GetPlayerRPNameFromSteamName(GetPlayerName(PlayerId())) then 
+            if whitelist[i] == GetPlayerName(PlayerId()) then 
+                if debug then
+                    print("Player "..GetPlayerName(PlayerId()).." matched the whitelist. Whitelising.")
+                end
                 setWhitelisted()
             end
         end
         for i = 1, #advancedWhitelist do
-            --                         Replace this export with whatever your server uses to identify people.
-            if advancedWhitelist[i] == exports.GTALife:GetPlayerRPNameFromSteamName(GetPlayerName(PlayerId())) then 
+            if advancedWhitelist[i] == GetPlayerName(PlayerId()) then 
+                if debug then
+                    print("Player "..GetPlayerName(PlayerId()).." matched the whitelist. Whitelising.")
+                end
                 setAdvWhitelist()
             end
         end
@@ -158,18 +196,18 @@ local function planeWhitelistLoop()
 end
 
 local function drawTxt(text,font,centre,x,y,scale,r,g,b,a)
-  SetTextFont(font)
-  SetTextProportional(0)
-  SetTextScale(scale, scale)
-  SetTextColour(r, g, b, a)
-  SetTextDropShadow(0, 0, 0, 0,255)
-  SetTextEdge(1, 0, 0, 0, 255)
-  SetTextDropShadow()
-  SetTextOutline()
-  SetTextCentre(centre)
-  SetTextEntry("STRING")
-  AddTextComponentString(text)
-  DrawText(x , y) 
+    SetTextFont(font)
+    SetTextProportional(0)
+    SetTextScale(scale, scale)
+    SetTextColour(r, g, b, a)
+    SetTextDropShadow(0, 0, 0, 0,255)
+    SetTextEdge(1, 0, 0, 0, 255)
+    SetTextDropShadow()
+    SetTextOutline()
+    SetTextCentre(centre)
+    SetTextEntry("STRING")
+    AddTextComponentString(text)
+    DrawText(x , y) 
 end
 
 local function displayColorOptions()
@@ -190,13 +228,14 @@ end
 
 Citizen.CreateThread(function()
     CreateTheBlip()
-    while true do
+    while enabled do
         Wait(5)
+        _menuPool:ProcessMenus()
         playerPed = GetPlayerPed(-1)
         playerCoords = GetEntityCoords(playerPed, true)
         vehicleIn = GetVehiclePedIsIn(playerPed, false)
         if whitelisted then
-            if not blipsCreated then
+            if not blipsCreated and useFlightRestrictions then
                 for i = 1, #flightRestrictions do 
                     local blip = AddBlipForRadius(flightRestrictions[i].x, flightRestrictions[i].y, flightRestrictions[i].z, flightRestrictions[i].radius)
                     SetBlipColour(blip, flightRestrictions[i].color)
@@ -229,13 +268,6 @@ Citizen.CreateThread(function()
                     displayColorOptions()
                 end
             end
-        end
-        if debug then
-            --print("||c_airplanes.lua|| Whitelisted? "..tostring(whitelisted))
-            --print(GetDistanceBetweenCoords(playerCoords, iX, iY, iZ, true))
-            --print(playerCoords)
-            --print(vehicleSpawn.x)
-            --print(GetVehiclePedIsIn(playerPed, false))
         end
     end
 end)
@@ -283,8 +315,10 @@ end
 
 AddEventHandler("playerSpawned", RunPlaneThread)
 
-RegisterCommand('manuallystartairplanescauseimtoolazytorestartframework', function(source, args, rawCommand)
-    -- This command resets the whitelist check for when the resource is restarted without leaving the game.
-    RunPlaneThread()
-    
-end, false)
+if debug then
+    RegisterCommand('ManuallyStartAirplanesCauseImTooLazyToRestartMyGame', function(source, args, rawCommand)
+        -- This command resets the whitelist check for when the resource is restarted without leaving the game.
+        RunPlaneThread()
+        
+    end, false)
+end
